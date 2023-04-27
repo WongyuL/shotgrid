@@ -3,46 +3,14 @@ import pprint
 import os
 import six
 import logging as logger
-from trial_02 import CreateXlsDialog
 from PyQt5 import QtWidgets
-
-# def main(args):
-#     # Make sure we have only one arg, the URL
-#     if len(args) != 1:
-#         sys.exit("This script requires exactly one argument")
-#
-#     # Make sure the argument have a : symbol
-#     if args[0].find(":") < 0:
-#         sys.exit("The argument is a url and requires the symbol ':'")
-#
-#     # Parse the URL
-#     protocol, fullPath = args[0].split(":", 1)
-#
-#     # If there is a querystring, parse it
-#     if fullPath.find("?") >= 0:
-#         path, fullArgs = fullPath.split("?", 1)
-#         action = path.strip("/")
-#         params = parse_qs(fullArgs)
-#     else:
-#         action = fullPath.strip("/")
-#         params = ""
-#
-#     # This is where you can do something productive based on the params and the
-#     # action value in the URL. For now we'll just print out the contents of the
-#     # parsed URL.
-#     fh = open('output.txt', 'w')
-#     fh.write(pprint.pformat((protocol, action, params)))
-#     fh.close()
-#
-#     #show UI
-#     app = QtWidgets.QApplication(sys.argv)
-#     dialog = CreateXlsDialog()
-#     dialog.show()
+from shotgun_api3 import Shotgun
 
 
-# SERVER_PATH = 'https://rndtest.shotgrid.autodesk.com'
-# SCRIPT_NAME = 'script_wongyu'
-# SCRIPT_KEY = 'stunj5lyzpkQyeapzrbdejd-b'
+SERVER_PATH = 'https://rndtest.shotgrid.autodesk.com'
+SCRIPT_NAME = 'script_wongyu'
+SCRIPT_KEY = 'stunj5lyzpkQyeapzrbdejd-b'
+sg = Shotgun(SERVER_PATH, SCRIPT_NAME, SCRIPT_KEY)
 # ---------------------------------------------------------------------------------------------
 # Variables
 # ---------------------------------------------------------------------------------------------
@@ -71,27 +39,41 @@ class ShotgunAction:
         self.protocol, self.action, self.params = self._parse_url()
 
         # entity type that the page was displaying
-        self.entity_type = self.params["entity_type"]
-        logger.info("params: %s" % self.entity_type)
+        # version = sg.find_one(self.data[0], str(code))
+        # self.code = self.params["code"]
+        # logger.info("params: %s" % self.code)
+
+        # self.sg_status_list = self.params["sg_status_list"]
+        # logger.info("params: %s" % self.sg_status_list)
+        # self.data()
+        #
+        # for code in self.data[1]:
+        #     self.version = sg.find_one(self.data[0], ['id', 'is', str(code)])
+            # local_file_path = self.dir_path + "/" + re.sub(r"\s+", '_', version['sg_uploaded_movie']['name'])
+            # sg.download_attachment(version['sg_uploaded_movie'], file_path=local_file_path)
+
+        # self.data()
+        # print(self.data())
 
         self.selected_ids = []
-        if len(self.params["selected_ids"]) > 1:
+        if len(self.params["selected_ids"]) > 0:
             sids = self.params["selected_ids"].split(",")
             self.selected_ids = [int(id) for id in sids]
 
-        else:
-            self.selected_ids = self.params["selected_ids"]
-        logger.info("params: %s" % self.selected_ids)
+        # All selected ids of the entities returned by the query in filter format ready
+        # to use in a find() query
+        self.selected_ids_filter = self._convert_ids_to_filter(self.selected_ids)
 
-        if self.action == 'processVersion':
-            app = QtWidgets.QApplication(sys.argv)
-            dialog = CreateXlsDialog()
-            dialog.show()
-            dialog.sys.exit(app.exec_())
-            sys.exit(app.exec_())
 
-        else:
-            print("No Action")
+        # if self.action == 'processVersion':
+        #     app = QtWidgets.QApplication(sys.argv)
+        #     dialog = CreateXlsDialog()
+        #     dialog.show()
+        #     # dialog.sys.exit(app.exec_())
+        #     sys.exit(app.exec_())
+        #
+        # else:
+        #     print("No Action")
 
         # Project info (if the ActionMenuItem was launched from a page not belonging
         # to a Project (Global Page, My Page, etc.), this will be blank
@@ -108,6 +90,17 @@ class ShotgunAction:
 
         # Human readable names of the columns currently displayed on the page
         self.column_display_names = self.params["column_display_names"]
+
+        # All ids of the entities returned by the query (not just those visible on the page)
+        self.ids = []
+        if len(self.params["ids"]) > 0:
+            ids = self.params["ids"].split(",")
+            self.ids = [int(id) for id in ids]
+
+        # All ids of the entities returned by the query in filter format ready
+        # to use in a find() query
+        self.ids_filter = self._convert_ids_to_filter(self.ids)
+
 
         # All ids of the entities returned by the query (not just those visible on the page)
 
@@ -138,13 +131,11 @@ class ShotgunAction:
 
         # session_uuid
         self.session_uuid = self.params["session_uuid"]
+        #
 
-        if self.action == 'processVersion':
-            app = QtWidgets.QApplication(sys.argv)
-            dialog = CreateXlsDialog()
-            dialog.show()
-            dialog.sys.exit(app.exec_())
-            sys.exit(app.exec_())
+    def data(self):
+        # data = [self.code, self.sg_status_list]
+        return self.selected_ids
 
     # ----------------------------------------------
     # Set up logging
@@ -193,9 +184,13 @@ class ShotgunAction:
         logger.info("params: %s" % params)
         return protocol, action, params
 
-    # ----------------------------------------------
-    # Convert IDs to filter format to us in find() queries
-    # ----------------------------------------------
+    def _convert_ids_to_filter(self, ids):
+        filter = []
+        for id in ids:
+            filter.append(["id", "is", id])
+        logger.debug("parsed ids into: %s" % filter)
+        return filter
+
 
 
 # ----------------------------------------------
@@ -203,7 +198,14 @@ class ShotgunAction:
 # ----------------------------------------------
 if __name__ == "__main__":
     sa = ShotgunAction(sys.argv[1])
-
+    action = sa.action
+    if action == 'processVersion':
+        app = QtWidgets.QApplication(sys.argv)
+        from for_ui_asset import CreateXlsDialog
+        dialog = CreateXlsDialog()
+        dialog.show()
+        # dialog.sys.exit(app.exec_())
+        sys.exit(app.exec_())
 
     # try:
     #     sa = ShotgunAction(sys.argv[1])

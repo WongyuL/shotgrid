@@ -1,17 +1,10 @@
+import shotgun_api3
 from PyQt5 import QtWidgets
+# from PyQt5.QtWidgets import QApplication, QWidget
+from handler_f import ShotgunAction
 import sys
 import openpyxl
-from shotgun_api3 import shotgun
-import sample_handle
-from handler_f import ShotgunAction
 
-# from shotgun_api3 import Shotgun
-import xlsxwriter
-
-
-SERVER_PATH = "https://rndtest.shotgrid.autodesk.com"
-SCRIPT_NAME = 'script_kej'
-SCRIPT_KEY = 'kibjce#prQeimq3lsojkstgmq'
 
 class CreateXlsDialog(QtWidgets.QDialog):
     """
@@ -33,8 +26,9 @@ class CreateXlsDialog(QtWidgets.QDialog):
         self.pathEdit = None
         self.pathLabel = None
         self.path = None
-        self.sa = ShotgunAction()
-        # self.data = sa.data()
+        # self.action = ShotgunAction(sys.argv[1])
+        sa = ShotgunAction(sys.argv[1])
+        self.selected_ids = sa.data()
         self.initUI()
 
     def initUI(self):
@@ -66,8 +60,6 @@ class CreateXlsDialog(QtWidgets.QDialog):
         self.setLayout(mainLayout)
         self.setWindowTitle("Create XLS")
 
-        self.show()
-
     def browsePath(self):
         """
         A method to open a file browser and choose a file path.
@@ -98,8 +90,8 @@ class CreateXlsDialog(QtWidgets.QDialog):
         """
         super().accept()
 
-    def data(self):
-        pass
+    # def data(self):
+    #     pass
 
     def create_xls(self):
         """
@@ -110,37 +102,68 @@ class CreateXlsDialog(QtWidgets.QDialog):
         entity_status (str): The status of the entity to be included in the Excel file.
 
         """
-        # ver = sg.find("Version", filters=[["sg_status_list", "is", "ip"]], fields=["code", "sg_status_list"])
-        # filters = [
-        #     ["project", "is", {"type": "Project", "id": PROJECT_ID}],
-        #     ["entity", "type_is", "Asset"],
-        #     ["entity", "name_is", entity_name],
-        #     ["sg_status_list", "is", entity_status]
-        # ]
-        # fields = ["code", "sg_status_list"]
 
-        # sg = Shotgun(SERVER_PATH, SCRIPT_NAME, SCRIPT_KEY)
-        # asset_data = sg.find("Asset", filters=[["code", "is", code], ["sg_status_list", "is", sg_status_list]],
-        #                      fields=["code", "sg_status_list"])
-        app = QtWidgets.QApplication(sys.argv)
-        # dlg = CreateXlsDialog()
-        # if dlg.exec_():
+        SERVER_PATH = 'https://rndtest.shotgrid.autodesk.com'
+        SCRIPT_NAME = 'script_wongyu'
+        SCRIPT_KEY = 'kmjozapdzo7vyk~bqvlLsxgsn'
+
+        sg = shotgun_api3.Shotgun(SERVER_PATH, SCRIPT_NAME, SCRIPT_KEY)
+        # ws = wb.active
         wb = openpyxl.Workbook()
         ws = wb.active
-        # ws.append(["Code", "Status"])
-        ws.append([self.sa.data()])
-        # for asset in asset_data:
-        #     ws.append([asset["code"], asset["sg_status_list"]])
+        ws.cell(row=1, column=1, value="Version Name")
+        ws.cell(row=1, column=2, value="Status")
+        row_num = 2
+        # versions = sg.find("Version", [], ["code", "sg_status_list"])
+        for selected_id in self.selected_ids:
+            versions = sg.find_one("Asset", [["id", "is", int(selected_id)]], ["id", "code", "sg_status_list"])
+            ws.cell(row=row_num, column=1, value=versions["code"])
+            # ws.cell(row=row_num, column=1, value=versions.get("code"))
+            ws.cell(row=row_num, column=2, value=versions["sg_status_list"])
+            row_num += 1
+            print(versions["code"])
+
+        # app = QtWidgets.QApplication(sys.argv)
+        # dlg = CreateXlsDialog()
+        # if dlg.exec_():
+        # wb = openpyxl.Workbook()
+        # ws = wb.active
+
+        # Write headers to worksheet
+        # ws.cell(row=1, column=1, value="Version Name")
+        # ws.cell(row=1, column=2, value="Status")
+        #
+        # # Write version data to worksheet
+        #
+        #
+        # # ws.append([self.action.code])
+        # row_num = 2
+        # ws.cell(row=row_num, column=1, value=versions["code"])
+        # # ws.cell(row=row_num, column=1, value=versions.get("code"))
+        # ws.cell(row=row_num, column=2, value=versions["sg_status_list"])
+        # row_num += 1
+        #
+        # for version in versions:
+        #     print("123456789", versions)
+        #     print("123", version)
+        #     # ws.cell(row=row_num, column=1, value=version["code"])
+        #     ws.cell(row=row_num, column=1, value=version["code"])
+        #     # ws.cell(row=row_num, column=2, value=version["sg_status_list"])
+        #     row_num += 1
         try:
             wb.save(self.path + '.xlsx')
             print("saved")
         except Exception as e:
             print(f"error: {str(e)}")
-        sys.exit(app.exec_())
+        # sys.exit(app.exec_())
 
 
-#
-# if __name__ == '__main__':
-#     name = "example_code"
-#     sg_status_list = "example_status"
-#     create_xls(name, sg_status_list)
+if __name__ == '__main__':
+    app = QtWidgets.QApplication(sys.argv)
+    cd = CreateXlsDialog()
+    cd.show()
+    sys.exit(app.exec_())
+
+
+    # sg_status_list = "example_status"
+    # create_xls(name, sg_status_list)

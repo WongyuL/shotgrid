@@ -7,9 +7,6 @@ from trial_02 import CreateXlsDialog
 
 # from pprint import pprint
 
-# SERVER_PATH = "https://rndtest.shotgrid.autodesk.com"
-# SCRIPT_NAME = 'script_kej'
-# SCRIPT_KEY = 'kibjce#prQeimq3lsojkstgmq'
 
 print(os.path.dirname(sys.argv[0]))
 logfile = os.path.dirname(sys.argv[0]) + "/log/test_han.log"
