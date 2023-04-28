@@ -1,74 +1,23 @@
-#!/usr/bin/env python
-# encoding: utf-8
-
-# ---------------------------------------------------------------------------------------------
-# Description
-# ---------------------------------------------------------------------------------------------
-"""
-The values sent by the Action Menu Item are in the form of a GET request that is similar to the
-format: myCoolProtocol://doSomethingCool?user_id=24&user_login=shotgun&title=All%20Versions&...
-
-In a more human-readable state that would translate to something like this:
-{
-    'project_name': 'Demo Project',
-     'user_id': '24',
-     'title': 'All Versions',
-     'user_login': 'shotgun',
-     'sort_column': 'created_at',
-     'entity_type': 'Version',
-     'cols': 'created_at',
-     'ids': '5,2',
-     'selected_ids': '2,5',
-     'sort_direction': 'desc',
-     'project_id': '4',
-     'session_uuid': 'd8592bd6-fc41-11e1-b2c5-000c297a5f50',
-     'column_display_names':
-    [
-        'Version Name',
-         'Thumbnail',
-         'Link',
-         'Artist',
-         'Description',
-         'Status',
-         'Path to frames',
-         'QT',
-         'Date Created'
-    ]
-}
-
-This simple class parses the url into easy to access types variables from the parameters,
-action, and protocol sections of the url. This example url
-myCoolProtocol://doSomethingCool?user_id=123&user_login=miled&title=All%20Versions&...
-would be parsed like this:
-
-    (string) protocol: myCoolProtocol
-    (string) action: doSomethingCool
-    (dict)   params: user_id=123&user_login=miled&title=All%20Versions&...
-
-The parameters variable will be returned as a dictionary of string key/value pairs. Here's
-how to instantiate:
-
-  sa = ShotgunAction(sys.argv[1]) # sys.argv[1]
-
-  sa.params['user_login'] # returns 'miled'
-  sa.params['user_id'] # returns 123
-  sa.protocol # returns 'myCoolProtocol'
-"""
-
-
-# ---------------------------------------------------------------------------------------------
-# Imports
-# ---------------------------------------------------------------------------------------------
-import sys, os
+import sys
+import pprint
+import os
 import six
 import logging as logger
+from PyQt5 import QtWidgets
+from shotgun_api3 import Shotgun
 
+
+SERVER_PATH = 'https://rndtest.shotgrid.autodesk.com'
+SCRIPT_NAME = 'script_wongyu'
+SCRIPT_KEY = 'stunj5lyzpkQyeapzrbdejd-b'
+sg = Shotgun(SERVER_PATH, SCRIPT_NAME, SCRIPT_KEY)
 # ---------------------------------------------------------------------------------------------
 # Variables
 # ---------------------------------------------------------------------------------------------
 # location to write logfile for this script
 # logging is a bit of overkill for this class, but can still be useful.
-logfile = os.path.dirname(sys.argv[0]) + "/shotgun_action.log"
+print(os.path.dirname(sys.argv[0]))
+logfile = os.path.dirname(sys.argv[0]) + "/test_han.log"
 
 
 # ----------------------------------------------
@@ -81,12 +30,6 @@ class ShotgunActionException(Exception):
 # ----------------------------------------------
 # ShotgunAction Class to manage ActionMenuItem call
 # ----------------------------------------------
-def _convert_ids_to_filter(ids):
-    filter = []
-    for id in ids:
-        filter.append(["id", "is", id])
-    logger.debug("parsed ids into: %s" % filter)
-    return filter
 
 
 class ShotgunAction:
@@ -96,7 +39,41 @@ class ShotgunAction:
         self.protocol, self.action, self.params = self._parse_url()
 
         # entity type that the page was displaying
-        self.entity_type = self.params["entity_type"]
+        # version = sg.find_one(self.data[0], str(code))
+        # self.code = self.params["code"]
+        # logger.info("params: %s" % self.code)
+
+        # self.sg_status_list = self.params["sg_status_list"]
+        # logger.info("params: %s" % self.sg_status_list)
+        # self.data()
+        #
+        # for code in self.data[1]:
+        #     self.version = sg.find_one(self.data[0], ['id', 'is', str(code)])
+            # local_file_path = self.dir_path + "/" + re.sub(r"\s+", '_', version['sg_uploaded_movie']['name'])
+            # sg.download_attachment(version['sg_uploaded_movie'], file_path=local_file_path)
+
+        # self.data()
+        # print(self.data())
+
+        self.selected_ids = []
+        if len(self.params["selected_ids"]) > 0:
+            sids = self.params["selected_ids"].split(",")
+            self.selected_ids = [int(id) for id in sids]
+
+        # All selected ids of the entities returned by the query in filter format ready
+        # to use in a find() query
+        self.selected_ids_filter = self._convert_ids_to_filter(self.selected_ids)
+
+
+        # if self.action == 'processVersion':
+        #     app = QtWidgets.QApplication(sys.argv)
+        #     dialog = CreateXlsDialog()
+        #     dialog.show()
+        #     # dialog.sys.exit(app.exec_())
+        #     sys.exit(app.exec_())
+        #
+        # else:
+        #     print("No Action")
 
         # Project info (if the ActionMenuItem was launched from a page not belonging
         # to a Project (Global Page, My Page, etc.), this will be blank
@@ -122,17 +99,19 @@ class ShotgunAction:
 
         # All ids of the entities returned by the query in filter format ready
         # to use in a find() query
-        self.ids_filter = _convert_ids_to_filter(self.ids)
+        self.ids_filter = self._convert_ids_to_filter(self.ids)
+
+
+        # All ids of the entities returned by the query (not just those visible on the page)
+
+        # All ids of the entities returned by the query in filter format ready
+        # to use in a find() query
+        # self.ids_filter = _convert_ids_to_filter(self.ids)
 
         # ids of entities that were currently selected
-        self.selected_ids = []
-        if len(self.params["selected_ids"]) > 0:
-            sids = self.params["selected_ids"].split(",")
-            self.selected_ids = [int(id) for id in sids]
-
         # All selected ids of the entities returned by the query in filter format ready
         # to use in a find() query
-        self.selected_ids_filter = _convert_ids_to_filter(self.selected_ids)
+        # self.selected_ids_filter = _convert_ids_to_filter(self.selected_ids)
 
         # sort values for the page
         # (we don't allow no sort anymore, but not sure if there's legacy here)
@@ -152,16 +131,16 @@ class ShotgunAction:
 
         # session_uuid
         self.session_uuid = self.params["session_uuid"]
+        #
 
-        if self.action is not None:
-            # print self.action
-            # print self.selected_ids
-            self.executeAction(self.action, self.selected_ids)
+    def data(self):
+        # data = [self.code, self.sg_status_list]
+        return self.selected_ids
 
     # ----------------------------------------------
     # Set up logging
     # ----------------------------------------------
-    def _init_log(self, filename="shotgun_action.log"):
+    def _init_log(self, filename="handler_f.log"):
         try:
             logger.basicConfig(
                 level=logger.DEBUG,
@@ -203,23 +182,37 @@ class ShotgunAction:
                 p[key] = value
         params = p
         logger.info("params: %s" % params)
-        return (protocol, action, params)
+        return protocol, action, params
 
-    # ----------------------------------------------
-    # Convert IDs to filter format to us in find() queries
-    # ----------------------------------------------
+    def _convert_ids_to_filter(self, ids):
+        filter = []
+        for id in ids:
+            filter.append(["id", "is", id])
+        logger.debug("parsed ids into: %s" % filter)
+        return filter
 
-    def executeAction(self, action, selected_ids):
-        pass
 
 
 # ----------------------------------------------
 # Main Block
 # ----------------------------------------------
 if __name__ == "__main__":
-    try:
-        sa = ShotgunAction(sys.argv[1])
-        logger.info("ShotgunAction: Firing... %s" % (sys.argv[1]))
-    except IndexError as e:
-        raise ShotgunActionException("Missing GET arguments")
-    logger.info("ShotgunAction process finished.")
+    sa = ShotgunAction(sys.argv[1])
+    action = sa.action
+    if action == 'processShot':
+        app = QtWidgets.QApplication(sys.argv)
+        from for_ui_shot import CreateXlsDialog
+        dialog = CreateXlsDialog()
+        dialog.show()
+        # dialog.sys.exit(app.exec_())
+        sys.exit(app.exec_())
+
+    # try:
+    #     sa = ShotgunAction(sys.argv[1])
+    #     logger.info("ShotgunAction: Firing... %s" % (sys.argv[1]))
+    # except IndexError as e:
+    #     raise ShotgunActionException("Missing GET arguments")
+    # logger.info("ShotgunAction process finished.")
+    # sys.exit(main(sys.argv[1:]))
+
+
