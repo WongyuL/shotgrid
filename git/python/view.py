@@ -1,12 +1,8 @@
 import os
-
+import sys
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QScrollArea, QPushButton, QApplication
-
-
-class FileData:
-    pass
 
 
 class FileView(QWidget):
@@ -87,6 +83,7 @@ class FileView(QWidget):
             thumbnail_label = QLabel(self)
             thumbnail_label.setPixmap(thumbnail_pixmap)
 
+
             # create label for file name
             file_name_label = QLabel(data['name'], self)
             file_name_label.setAlignment(Qt.AlignCenter)
@@ -125,3 +122,6 @@ class FileView(QWidget):
 
     def open_blender(self, blender_path):
         os.system('blender "' + blender_path + '"')
+
+
+
